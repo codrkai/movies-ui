@@ -273,10 +273,10 @@ export default function TMDBMovies({movieTypeValue}: TMDBMoviesProps) {
                 </div>
             </div>
 
-            <dialog id="details_modal" className="modal">
+            <dialog ref={detailsModal} id="details_modal" className="modal">
                 <div className="modal-box flex flex-col max-w-4xl h-2/3 bg-black border-gray-400 border-2">
                     <form method="dialog">
-                        <button className="btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
+                        <button className="z-40 btn btn-sm btn-circle btn-ghost absolute right-2 top-2">✕</button>
                     </form>
                     
                     {
