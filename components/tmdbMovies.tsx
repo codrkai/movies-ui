@@ -1,6 +1,7 @@
 'use client';
 
-import { useState, useEffect, useRef } from "react";
+import React, { useCallback } from "react";
+import { useState, useEffect, useRef, useMemo } from "react";
 import Image from "next/image";
 import { getListings } from "@/lib/tmdb";
 
@@ -23,7 +24,6 @@ type TMDBMoviesProps = {
 }
 
 export default function TMDBMovies({movieTypeValue}: TMDBMoviesProps) {
-    //const netflixLogo = `${imgPath500}/wwemzKWzjKYJFfCeiB57q3r4Bcm.png`;
     const imgPathOriginal = `${process.env.NEXT_PUBLIC_TMDB_IMAGE_URL}original/`;
     const imgPath500 = `${process.env.NEXT_PUBLIC_TMDB_IMAGE_URL}w500/`;
     const youtubeEmbedLink = 'https://www.youtube.com/embed/';
@@ -31,15 +31,16 @@ export default function TMDBMovies({movieTypeValue}: TMDBMoviesProps) {
     const [pageTitle, setPageTitle] = useState('');
     const [trailerModal, setTrailerModal] = useState(false);
     const [trailerVideo, setTrailerVideo] = useState('');
+    const detailsModal = useRef<HTMLDialogElement | null>(null);
 
-    const movieType = [
+    const movieType = useMemo(() => [
         {id: 0, title: 'Movies Now Playing in Theaters', type: 'nowplaying'},
         {id: 1, title: 'Movies Coming Soon To Theaters', type: 'upcoming'},
         {id: 2, title: 'Popular Movies Playing in Theaters', type: 'popular'},
-    ];
+    ], []);
 
-    const [movies, setMovies] = useState([]);
-    const [trailers, setTrailers] = useState([]);
+    const [movies, setMovies] = useState<MoviesProp[]>([]);
+    const [trailers, setTrailers] = useState<TrailerProp[]>([]);
 
     const [details, setDetails] = useState({
         id: 0,
@@ -61,17 +62,10 @@ export default function TMDBMovies({movieTypeValue}: TMDBMoviesProps) {
         poster_path: ''
     });
 
-    useEffect(() => {
-        const loadMovies = async () => {
-            const data = await getMovies(movieTypeValue);
-        }
-        loadMovies();
-    }, [movieTypeValue, setPageTitle, setMovies, setActiveMovie, setMoviePoster]);
-
-    const getMovies = async (value: number) => {
+    const getMovies = useCallback(async (value: number) => {
         const data = await getListings(movieType[value].type, 0);
 
-        if (data.results) {
+        if (data.results && data.results.length > 0) {
             setPageTitle(movieType[value].title);
 
             setMovies(data.results);
@@ -87,14 +81,31 @@ export default function TMDBMovies({movieTypeValue}: TMDBMoviesProps) {
 
             setMoviePoster(currentMoviePoster);
         }
-    };
+    }, [movieType, imgPathOriginal]);
+
+    useEffect(() => {
+        let isMounted = true;
+
+        const fetchMovies = async () => {
+            if (isMounted) {
+                getMovies(movieTypeValue);
+            }
+        };
+
+        fetchMovies();
+
+        return () => {
+            isMounted = false;
+        };
+
+    }, [movieTypeValue, movieType, getMovies]);
     
     const getTrailers = async (id: number) => {
         setTrailerVideo('');
 
         const data = await getListings('trailers', id);
 
-        if (data.results) {
+        if (data.results && data.results.length > 0) {
             setTrailers(data.results);
             setTrailerVideo(`${youtubeEmbedLink}${data.results[0].key}`);
         }
@@ -103,7 +114,7 @@ export default function TMDBMovies({movieTypeValue}: TMDBMoviesProps) {
     };
 
     const handleActiveMovie = (id: number) => {
-        const selectedMovie: any = movies.filter((element: {id: number}) => element.id === id)[0];
+        const selectedMovie: MoviesProp = movies.filter((element: {id: number}) => element.id === id)[0];
         setActiveMovie(selectedMovie);
         const currentMoviePoster = imgPathOriginal + selectedMovie.poster_path;
         setMoviePoster(currentMoviePoster);
@@ -126,10 +137,8 @@ export default function TMDBMovies({movieTypeValue}: TMDBMoviesProps) {
                 title: data.title
             });
 
-            //document.getElementById('details_modal').showModal();
-            const modal: any = document.getElementById('details_modal');
-            if (modal) {
-                modal.showModal();
+            if (detailsModal.current) {
+                detailsModal.current.showModal();
             }
         }
     };
@@ -153,7 +162,13 @@ export default function TMDBMovies({movieTypeValue}: TMDBMoviesProps) {
                         <div id="video-player" className="mt-3 border-gray-400">
                             {
                             trailerVideo &&
-                            <iframe width="854" height="480" src={trailerVideo} allowFullScreen></iframe>
+                                <iframe 
+                                    width="854" 
+                                    height="480" 
+                                    src={trailerVideo} 
+                                    allow="autoplay; encrypted-media" 
+                                    allowFullScreen
+                                ></iframe>
                             }
                         </div>
                         <div className="mt-10">
@@ -164,14 +179,14 @@ export default function TMDBMovies({movieTypeValue}: TMDBMoviesProps) {
                             {
                             trailers && 
                                 trailers?.map( (item: TrailerProp) => {
-                                    if (item.site == "YouTube") {
+                                    if (item.site === "YouTube") {
                                         return (
-                                        <>
-                                            <li key={item.key} className="hover:text-blue-500">
+                                        <React.Fragment key={item.key}>
+                                            <li className="hover:text-blue-500">
                                                 <button onClick={() => setTrailerVideo(`${youtubeEmbedLink}${item.key}`)}>{item.name}</button>
                                             </li>
                                             <li>{item.type}</li>
-                                        </>
+                                        </React.Fragment>
                                         )
                                     }
                                 })

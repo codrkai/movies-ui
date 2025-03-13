@@ -5,11 +5,10 @@ import Image from 'next/image';
 import { useState } from 'react';
 
 interface NavProps {
-    value: number;
     onChange: (value: number) => void;
 }
 
-export default function Nav({value, onChange}: NavProps) {
+export default function Nav({onChange}: NavProps) {
     const user = {
         name: 'Johnny',
         avatar: 'https://avatars.githubusercontent.com/u/52646391?v=4',

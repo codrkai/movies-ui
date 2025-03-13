@@ -10,7 +10,6 @@ export default function MoviesAPI() {
     return (
         <>
             <Nav
-                value={0}
                 onChange={(value: number) => setMovieVal(value)}
             />
 
